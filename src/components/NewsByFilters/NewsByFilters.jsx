@@ -1,10 +1,27 @@
 import s from './styles.module.css'
-import Pagination from "../Pagination/Pagination.jsx";
-import {TOTAL_PAGES} from "../../constants/constants.js";
+import {PAGE_SIZE, TOTAL_PAGES} from "../../constants/constants.js";
 import NewsList from "../NewsList/NewsList.jsx";
 import NewsFilters from "../NewsFilters/NewsFilters.jsx";
+import {useFilters} from "../../helpers/hooks/useFilters.js";
+import {useDebounce} from "../../helpers/hooks/useDebounce.js";
+import {useFetch} from "../../helpers/hooks/useFetch.js";
+import {getNews} from "../../api/apiNews.js";
+import PaginationWrapper from "../PaginationWrapper/PaginationWrapper.jsx";
 
-function NewsByFilters({filters, changeFilter, isLoading, news}) {
+function NewsByFilters() {
+   const {filters, changeFilter} = useFilters({
+      page_number: 1,
+      page_size: PAGE_SIZE,
+      category: null,
+      keywords: '',
+   });
+
+   const debouncedKeywords = useDebounce(filters.keywords, 1500);
+
+   const {data, isLoading} = useFetch(getNews, {
+      ...filters,
+      keywords: debouncedKeywords,
+   });
 
    const handleNextPage = () => {
       if (filters.page_number < TOTAL_PAGES) {
@@ -24,23 +41,22 @@ function NewsByFilters({filters, changeFilter, isLoading, news}) {
 
    return (
       <section className={s.section}>
-         <NewsFilters changeFilter={changeFilter} filters={filters} />
+         <NewsFilters changeFilter={changeFilter} filters={filters}/>
 
-         <Pagination
+         <PaginationWrapper
+            top={true}
+            bottom={true}
             currentPage={filters.page_number}
             handleNextPage={handleNextPage}
             handlePrevPage={handlePrevPage}
             handlePageClick={handlePageClick}
-            totalPages={TOTAL_PAGES}/>
-
-         <NewsList isLoading={isLoading} news={news}/>
-
-         <Pagination
-            currentPage={filters.page_number}
-            handleNextPage={handleNextPage}
-            handlePrevPage={handlePrevPage}
-            handlePageClick={handlePageClick}
-            totalPages={TOTAL_PAGES}/>
+            totalPages={TOTAL_PAGES}
+         >
+            <NewsList
+               isLoading={isLoading}
+               news={data?.news}
+            />
+         </PaginationWrapper>
       </section>
    );
 }
